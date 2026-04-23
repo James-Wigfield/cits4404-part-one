@@ -1,0 +1,244 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage{array}
+\usepackage{cite}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=black,
+    urlcolor=blue
+}
+
+\title{\textbf{Nature-Inspired Optimisation Algorithms}\\
+       \large A Literature Review: CITS4404 Part 1}
+\author{James Wigfield (23334375) \and
+        Farahnaz Abdi (23475614) \and
+        Gaganish Yadav (24552039) \and
+        Chenxu You (24547664)}
+\date{April 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Dragonfly Algorithm (DA) Synopsis}
+
+\noindent\textbf{Source paper:} S.\ Mirjalili, ``Dragonfly algorithm: a new
+meta-heuristic optimization technique for solving single-objective, discrete,
+and multi-objective problems,'' \textit{Neural Computing and Applications},
+vol.~27, pp.~1053--1073, 2016.~\cite{mirjalili2016dragonfly} 
+
+\subsection*{Motivation and Gap}
+
+The Dragonfly Algorithm (DA) is a swarm intelligence (SI) optimiser proposed by
+Mirjalili~\cite{mirjalili2016dragonfly} to handle continuous, binary, and
+multi-objective optimisation problems.
+While algorithms like Particle Swarm Optimisation
+(PSO)~\cite{kennedy1995pso}, Ant Colony Optimisation (ACO), and Artificial Bee
+Colony (ABC) have been widely studied, they only model a small some of the 
+behaviours seen in natural swarms, and dragonfly swarming in particular
+had never been explored computationally before this paper.
+The No Free Lunch theorem~\cite{wolpert1997nfl} also supports the case for a new
+approach: since no single algorithm works best on every problem, a genuinely
+different method still has room to outperform existing ones on the problems where
+they struggle.
+
+The specific gap DA targets is that previous SI algorithms model some aspects of
+swarm behaviour but none capture all five survival behaviours at once.
+For example, PSO only models attraction toward a personal best and a global
+best, and while several improved variants have tried to add separation,
+alignment, or cohesion operators
+independently~\cite{cui2009boid,kadrovach2002particle,cui2009alignment}, none
+brought all five together in a single framework.
+Beyond that, most existing algorithms don't separate two quite different swarming
+modes: \textit{static} swarms that hunt over a small area (exploration) and
+\textit{dynamic} migratory swarms that travel in one direction (exploitation).
+A further gap is the absence of an \textit{enemy} concept, search agents are
+only pulled toward promising regions but never actively pushed away from bad
+ones, which can hurt diversity early in the search.
+
+\subsection*{The Algorithm}
+
+The main idea is to model artificial dragonflies using \textbf{five behavioural
+operators} built on Reynolds' flocking rules~\cite{reynolds1987flocks}, with two
+extra terms added for food and enemy interactions:
+
+\begin{enumerate}
+    \item \textbf{Separation} ($S_i = -\sum_j (X - X_j)$): avoids collision with neighbours.
+    \item \textbf{Alignment} ($A_i = \frac{1}{N}\sum_j V_j$): matches neighbours' velocities.
+    \item \textbf{Cohesion} ($C_i = \frac{1}{N}\sum_j X_j - X$): moves toward the neighbourhood centre of mass.
+    \item \textbf{Food attraction} ($F_i = X^+ - X$): steers toward the current best solution.
+    \item \textbf{Enemy distraction} ($E_i = X^- + X$): steers away from the current worst solution.
+\end{enumerate}
+
+The \textbf{step vector} (analogous to PSO velocity) combines all five:
+\[
+    \Delta X_{t+1} = (s\,S_i + a\,A_i + c\,C_i + f\,F_i + e\,E_i) + w\,\Delta X_t
+\]
+where $w$ decays over iterations to shift from exploration to exploitation.
+When a dragonfly has no neighbours it performs a \textbf{L\'{e}vy flight}
+($X_{t+1} = X_t + \text{Levy}(d)\cdot X_t$), giving agents with no nearby neighbours a way to
+still explore the space.
+Static swarming (high alignment weight $a$, low cohesion weight $c$) models
+exploration, dynamic swarming (low $a$, high $c$) models exploitation, and the
+neighbourhood radius increases over time so what starts as many small independent
+swarms gradually merges into a larger swarm.
+
+There are two main variants that extend this base algorithm.
+The \textbf{Binary DA (BDA)} uses a v-shaped transfer function to convert the
+continuous step values into bit-flip probabilities, v-shaped functions work
+better here because s-shaped ones tend to push particles toward extreme binary
+values~\cite{saremi2014transfer}.
+The \textbf{Multi-Objective DA (MODA)} adds a Pareto archive and a grid system
+where food sources are picked from the least-crowded cells (to spread solutions
+out) and enemies from the most-crowded ones (to avoid revisiting dense areas),
+borrowing the archive approach from MOPSO~\cite{coello2004mopso}.
+
+Each variant is tested separately against established baselines.
+DA is benchmarked on 19 standard test functions (unimodal, multi-modal, and
+composite) against PSO and GA, with the Wilcoxon rank-sum test used to check
+whether differences are statistically significant.
+BDA is tested on 13 of the same functions encoded in binary space, compared
+against Binary PSO and Binary GSA.
+MODA is evaluated on five ZDT multi-objective benchmarks plus a real submarine
+propeller design problem, using Inverse Generalised Distance (IGD) as the
+performance metric and comparing against MOPSO and NSGA-II.
+
+% The paper includes pseudocode, equations, and parameter settings in enough
+% detail to replicate the experiments, and source code is publicly available.
+
+\subsection*{Results and Assessment}
+
+On single-objective problems, DA achieves the best or joint-best result on 13 of
+19 test functions.
+The advantage over GA is clear and statistically significant on almost all
+functions ($p < 0.0002$).
+Against PSO the picture is more mixed, differences are often not significant
+on multi-modal functions (e.g.\ TF9, TF11, TF12), and on TF8 (Schwefel) PSO
+substantially outperforms DA.
+On composite functions the advantage over PSO is not consistent, though the paper
+puts this down to those functions just being harder to solve in general.
+BDA outperforms BPSO and BGSA on 11 of 13 binary functions ($p < 0.002$), and
+MODA beats NSGA-II on all five ZDT variants by a clear margin while being
+competitive with MOPSO and outperforming it on ZDT3 and the three-objective variant.
+
+Overall, the main claims hold up reasonably well.
+The methodology is solid (30-run averaging, Wilcoxon significance testing, and
+a broad benchmark set).
+One thing worth noting is that DA is only compared against PSO and GA for the
+single-objective case, there's no comparison against anything more recent like
+Differential Evolution or the Grey Wolf Optimiser, so it's hard to know how well
+it would stack up against the current state of the art.
+The mixed results on composite functions also suggest the exploration/exploitation
+balance doesn't always hold up on more complex landscapes.
+For this assignment though, DA looks like a practical fit, its continuous
+parameter space and the way the five operators naturally balance exploration and
+exploitation make it well-suited to optimising the 7-dimensional trading bot
+parameter vectors, and the pseudocode in the paper is clear enough to implement
+from scratch.
+
+% Algorithm: ..
+\section{[Algorithm 2 Name] Synopsis}
+\label{sec:algo2}
+
+\noindent\textbf{Source paper:} 
+
+\subsection*{Motivation and Gap}
+
+
+\subsection*{The Algorithm}
+
+
+\subsection*{Results and Assessment}
+
+% Algorithm: 
+\section{[Algorithm 3 Name] Synopsis}
+\label{sec:algo3}
+
+\noindent\textbf{Source paper:} 
+\subsection*{Motivation and Gap}
+
+
+\subsection*{The Algorithm}
+
+
+\subsection*{Results and Assessment}
+
+
+% Algorithm .
+\section{[Algorithm 4 Name] Synopsis}
+\label{sec:algo4}
+
+\noindent\textbf{Source paper:} 
+\subsection*{Motivation and Gap}
+
+\subsection*{The Algorithm}
+
+
+\subsection*{Results and Assessment}
+
+
+\section{Comparative Conclusion}
+\label{sec:conclusion}
+
+
+
+\bibliographystyle{IEEEtran}
+\begin{thebibliography}{99}
+
+% DA references (James Wigfield)
+
+\bibitem{mirjalili2016dragonfly}
+S.~Mirjalili, ``Dragonfly algorithm: a new meta-heuristic optimization technique
+for solving single-objective, discrete, and multi-objective problems,''
+\textit{Neural Comput.\ Appl.}, vol.~27, no.~4, pp.~1053--1073, 2016.
+
+\bibitem{kennedy1995pso}
+J.~Kennedy and R.~Eberhart, ``Particle swarm optimization,'' in
+\textit{Proc.\ IEEE Int.\ Conf.\ Neural Networks}, 1995, pp.~1942--1948.
+
+\bibitem{wolpert1997nfl}
+D.~H.~Wolpert and W.~G.~Macready, ``No free lunch theorems for optimization,''
+\textit{IEEE Trans.\ Evol.\ Comput.}, vol.~1, no.~1, pp.~67--82, 1997.
+
+\bibitem{reynolds1987flocks}
+C.~W.~Reynolds, ``Flocks, herds and schools: a distributed behavioral model,''
+\textit{ACM SIGGRAPH Comput.\ Graph.}, vol.~21, no.~4, pp.~25--34, 1987.
+
+\bibitem{saremi2014transfer}
+S.~Saremi, S.~Mirjalili, and A.~Lewis, ``How important is a transfer function
+in discrete heuristic algorithms,''
+\textit{Neural Comput.\ Appl.}, pp.~1--16, 2014.
+
+\bibitem{coello2004mopso}
+C.~A.~C.~Coello, G.~T.~Pulido, and M.~S.~Lechuga, ``Handling multiple
+objectives with particle swarm optimization,''
+\textit{IEEE Trans.\ Evol.\ Comput.}, vol.~8, no.~3, pp.~256--279, 2004.
+
+\bibitem{cui2009boid}
+Z.~Cui and Z.~Shi, ``Boid particle swarm optimisation,''
+\textit{Int.\ J.\ Innov.\ Comput.\ Appl.}, vol.~2, pp.~77--85, 2009.
+
+\bibitem{kadrovach2002particle}
+B.~A.~Kadrovach and G.~B.~Lamont, ``A particle swarm model for swarm-based
+networked sensor systems,'' in
+\textit{Proc.\ ACM Symp.\ Appl.\ Comput.}, 2002, pp.~918--924.
+
+\bibitem{cui2009alignment}
+Z.~Cui, ``Alignment particle swarm optimization,'' in
+\textit{Proc.\ 8th IEEE Int.\ Conf.\ Cognitive Informatics}, 2009,
+pp.~497--501.
+
+% Additional references:
+
+\end{thebibliography}
+
+\end{document}
